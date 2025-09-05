@@ -1,0 +1,207 @@
+#!/bin/sh
+
+#
+# ╭━━━┳━━┳╮╱╱╭┳━━━┳━━━╮
+# ┃╭━╮┣┫┣┫╰╮╭╯┃╭━━┫╭━╮┃
+# ┃╰━╯┃┃┃╰╮┃┃╭┫╰━━┫╰━╯┃
+# ┃╭╮╭╯┃┃╱┃╰╯┃┃╭━━┫╭╮╭╯
+# ┃┃┃╰┳┫┣╮╰╮╭╯┃╰━━┫┃┃╰╮
+# ╰╯╰━┻━━╯╱╰╯╱╰━━━┻╯╰━╯
+#
+
+# See the river(1), riverctl(1), and rivertile(1) man pages for complete
+# documentation.
+
+# Some necessary prep:
+export XDG_CURRENT_DESKTOP="river"
+export XDG_SESSION_TYPE="wayland"
+export XDG_SESSION_DESKTOP="river"
+export QT_QPA_PLATFORM="wayland"
+export GDK_BACKEND="wayland,x11"
+export SDL_VIDEODRIVER="wayland"
+export CLUTTER_BACKEND="wayland"
+dbus-update-activation-environment --all
+export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$UID/bus
+export LIBSEAT_BACKEND=logind
+
+# Autostart
+riverctl spawn waybar
+riverctl spawn udiskie
+riverctl spawn blueman-applet
+riverctl spawn avizo-service # for volume & light indicators
+riverctl spawn nm-applet
+
+# Bar
+# riverctl spawn "/home/winterveil/src/mtrakker/server/mtrakker"
+riverctl spawn "barster | dam"
+
+# Keybinds
+riverctl map normal Super L spawn "j4-dmenu-desktop --dmenu='bemenu -i -l 12 --scrollbar autohide --center -W 0.16'"
+riverctl map normal Super 0 spawn "$HOME/scripts/desktop_environment/powermenu.sh"
+riverctl map normal Super A spawn "$HOME/scripts/desktop_environment/audiomenu.sh"
+
+riverctl map normal Super Print spawn "$HOME/scripts/desktop_environment/screencapmenu.sh"
+riverctl map normal Super Z spawn "$HOME/scripts/desktop_environment/screencapmenu.sh"
+
+riverctl map normal Super S spawn "hyprpicker -a"
+riverctl map normal None Print spawn "grimshot copy area"
+
+riverctl map normal Super Return spawn "foot"
+
+riverctl map normal Super+Shift C close
+riverctl map normal Super+Shift R close
+
+# Super+J and Super+K to focus the next/previous view in the layout stack
+riverctl map normal Super J focus-view next
+riverctl map normal Super K focus-view previous
+
+# Super+Shift+J and Super+Shift+K to swap the focused view with the next/previous
+# view in the layout stack
+riverctl map normal Super+Shift J swap next
+riverctl map normal Super+Shift K swap previous
+
+# Super+Period and Super+Comma to focus the next/previous output
+riverctl map normal Super Period focus-output next
+# riverctl map normal Super Comma focus-output previous
+
+# Super+Shift+{Period,Comma} to send the focused view to the next/previous output
+riverctl map normal Super+Shift Period send-to-output next
+# riverctl map normal Super+Shift Comma send-to-output previous
+
+# Super + Left Mouse Button to move views
+riverctl map-pointer normal Super BTN_LEFT move-view
+
+# Super + Right Mouse Button to resize views
+riverctl map-pointer normal Super BTN_RIGHT resize-view
+
+# Super + Middle Mouse Button to toggle float
+riverctl map-pointer normal Super BTN_MIDDLE toggle-float
+
+tag_key_mapping=("Y" "U" "I" "O" "P" "N" "M" "Comma")
+for i in $(seq 1 8)
+do
+    tags=$((1 << ($i - 1)))
+    key_index=$((i - 1))  # 0 based idx
+
+    # Super+[1-9] to focus tag [0-8]
+    riverctl map normal Super $i set-focused-tags $tags
+    riverctl map normal Super ${tag_key_mapping[$key_index]} set-focused-tags $tags
+
+    # Super+Shift+[1-9] to tag focused view with tag [0-8]
+    riverctl map normal Super+Shift $i set-view-tags $tags
+    riverctl map normal Super+Shift ${tag_key_mapping[$key_index]} set-view-tags $tags
+
+    # Super+Control+[1-9] to toggle focus of tag [0-8]
+    riverctl map normal Super+Control $i toggle-focused-tags $tags
+    riverctl map normal Super+Control ${tag_key_mapping[$key_index]} toggle-focused-tags $tags
+
+    # Super+Shift+Control+[1-9] to toggle tag [0-8] of focused view
+    riverctl map normal Super+Shift+Control $i toggle-view-tags $tags
+    riverctl map normal Super+Shift+Control ${tag_key_mapping[$key_index]} toggle-view-tags $tags
+done
+
+# Super+0 to focus all tags
+# Super+Shift+0 to tag focused view with all tags
+# all_tags=$(((1 << 32) - 1))
+# riverctl map normal Super 0 set-focused-tags $all_tags
+# riverctl map normal Super+Shift 0 set-view-tags $all_tags
+
+# Super+Space to toggle float
+riverctl map normal Super Space toggle-float
+
+# Various media key mapping examples for both normal and locked mode which do
+# not have a modifier
+for mode in normal locked
+do
+    # Control pulse audio volume
+    # riverctl map $mode None XF86AudioRaiseVolume  spawn 'pactl set-sink-volume @DEFAULT_SINK@ +5%'
+    # riverctl map $mode None XF86AudioLowerVolume  spawn 'pactl set-sink-volume @DEFAULT_SINK@ -5%'
+    # riverctl map $mode None XF86AudioMute         spawn 'pactl set-sink-mute @DEFAULT_SINK@ toggle'
+    # riverctl map $mode None XF86AudioMicMute      spawn 'pactl set-source-mute @DEFAULT_SOURCE@ toggle'
+    riverctl map $mode None XF86AudioRaiseVolume  spawn 'volumectl -u up'
+    riverctl map $mode None XF86AudioLowerVolume  spawn 'volumectl -u down'
+    riverctl map $mode None XF86AudioMute         spawn 'volumectl toggle-mute'
+    riverctl map $mode None XF86AudioMicMute      spawn 'volumectl -m toggle-mute'
+
+    # Control MPRIS aware media players
+    riverctl map $mode None XF86AudioMedia spawn 'playerctl play-pause'
+    riverctl map $mode None XF86AudioPlay  spawn 'playerctl play-pause'
+    riverctl map $mode None XF86AudioPrev  spawn 'playerctl previous'
+    riverctl map $mode None XF86AudioNext  spawn 'playerctl next'
+
+    # Control screen backlight brightness
+    # riverctl map $mode None XF86MonBrightnessUp   spawn 'light -A 8'
+    # riverctl map $mode None XF86MonBrightnessDown spawn 'light -U 8'
+    riverctl map $mode None XF86MonBrightnessUp   spawn 'lightctl up'
+    riverctl map $mode None XF86MonBrightnessDown spawn 'lightctl down'
+done
+
+# Set background and border color
+riverctl background-color 0x111111
+riverctl border-color-focused 0xff0000
+riverctl border-color-unfocused 0x586e75
+riverctl border-width 2
+
+# Display config
+if wlr-randr | grep -q "DP-3"; then
+    wlr-randr --output "DP-3" --mode 2560x1440 --pos 0,0
+    wlr-randr --output "eDP-1" --mode 2560x1440 --pos 2560,0 --scale 1.0
+elif wlr-randr | grep -q "DP-1"; then
+    wlr-randr --output "DP-1" --mode 3840x2160 --pos 0,0 --scale 1.0
+    wlr-randr --output "eDP-1" --mode 2560x1440 --pos 3840,0 --scale 1.0
+else
+    wlr-randr --output "eDP-1" --mode 2560x1440 --pos 0,0 --scale 1.0
+fi
+
+# Set caps to escape
+riverctl keyboard-layout -options "ctrl:nocaps,compose:rctrl" us
+
+# Focus follows mouse & mouse follows focus
+riverctl focus-follows-cursor always
+riverctl set-cursor-warp on-focus-change
+
+# Trackpad config
+riverctl input pointer-1739-0-Synaptics_TM3276-022 tap enabled
+riverctl input pointer-1739-0-Synaptics_TM3276-022 natural-scroll enabled
+
+riverctl input pointer-2-10-TPPS/2_IBM_TrackPoint accel-profile adaptive
+riverctl input pointer-2-10-TPPS/2_IBM_TrackPoint pointer-accel 0.35
+
+# Set keyboard repeat rate
+riverctl set-repeat 50 300
+
+# Make all views with an app-id that starts with "float" and title "foo" start floating.
+riverctl rule-add -app-id 'float*' -title 'foo' float
+
+# Make all views with app-id "bar" and any title use client-side decorations
+riverctl rule-add -app-id "bar" csd
+
+# Set the default layout generator to be rivertile and start it.
+# River will send the process group of the init executable SIGTERM on exit.
+riverctl default-layout wideriver
+# rivertile -view-padding 0 -outer-padding 0 &
+riverctl rule-add ssd # server side decorations, required for client outlines
+
+# riverctl map normal Super L send-layout-cmd wideriver "--ratio -0.05"
+# riverctl map normal Super H send-layout-cmd wideriver "--ratio +0.05"
+
+riverctl map normal Super T send-layout-cmd wideriver "--layout wide"
+riverctl map normal Super G send-layout-cmd wideriver "--layout monocle"
+
+riverctl map normal Super+Shift T send-layout-cmd wideriver "--count +1"
+riverctl map normal Super+Shift G send-layout-cmd wideriver "--count -1"
+
+wideriver \
+    --layout wide \
+    --stack diminish \
+    --count-wide-left 2 \
+    --ratio-wide 0.36 \
+    --border-color-focused 0xff0000 \
+    --border-color-unfocused 0x586e75 \
+
+# riverctl default-layout river-luatile
+# riverctl map normal Super H send-layout-cmd luatile adjust_split(0.1)
+# riverctl map normal Super L send-layout-cmd luatile adjust_split(-0.1)
+# riverctl map normal Super J send-layout-cmd luatile cycle_focus()
+# riverctl map normal Super+Shift J send-layout-cmd luatile move_to_other_side()
+# riverctl map normal Super N send-layout-cmd luatile switch_focus_side()

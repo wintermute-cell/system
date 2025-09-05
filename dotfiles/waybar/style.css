@@ -1,0 +1,16 @@
+* {
+    font-family: "Iosevka Nerd Font";
+    font-size: 14px;
+    padding: 0;
+    margin: -1px 0;
+}
+
+#window {
+	 color: transparent;
+	 background-color: transparent;
+}
+
+window#waybar { 
+	 color: transparent;
+	 background-color: transparent;
+}
